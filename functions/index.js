@@ -27,35 +27,29 @@ exports.devotterCronJob = functions.https.onRequest(async (request, response) =>
         .then(querySnapShot => {
             accessToken = querySnapShot.data().accessToken;
             accessTokenSecret = querySnapShot.data().accessTokenSecret;
-            // eslint-disable-next-line promise/no-nesting
-            firestore.collection('api').doc('keys').get()
-                .then(querySnapShot => {
-                    const consumerKey = querySnapShot.data().consumerKey;
-                    const consumerKeySecret = querySnapShot.data().consumerKeySecret;
-                    const client = new twitter({
-                        consumer_key: consumerKey,
-                        consumer_secret: consumerKeySecret,
-                        access_token_key: accessToken,
-                        access_token_secret: accessTokenSecret
-                    });
-                    client.get('statuses/user_timeline', (error, data, res) => {
-                        if (!error) {
-                            response.status(200).send(data);
-                        }
-                        else {
-                            response.status(200).send(error);
-                        }
-                    })
-                    return 0;
-                })
-                .catch(() => {
-                    response.status(200).send('Access Promise for collection api failed.');
-                    return 0;
-                });
+            return firestore.collection('api').doc('keys').get();
+        })
+        .then(querySnapShot => {
+            const consumerKey = querySnapShot.data().consumerKey;
+            const consumerKeySecret = querySnapShot.data().consumerKeySecret;
+            const client = new twitter({
+                consumer_key: consumerKey,
+                consumer_secret: consumerKeySecret,
+                access_token_key: accessToken,
+                access_token_secret: accessTokenSecret
+            });
+            client.get('statuses/user_timeline', (error, data, res) => {
+                if (!error) {
+                    response.status(200).send(data);
+                }
+                else {
+                    response.status(200).send(error);
+                }
+            });
             return 0;
         })
         .catch(() => {
-            response.status(200).send('Access Promise for collection users failed.');
+            response.status(200).send('Access Promise for each collection failed.');
             return 0;
         });
 
