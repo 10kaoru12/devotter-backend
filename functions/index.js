@@ -24,27 +24,26 @@ let uploadPath;
 
 //main
 exports.devotterCronJob = functions.https.onRequest((request, response) => {
-        cors(request, response, () => {
-            if (request.method !== "GET") {
-                return request.status(401).json({
-                    message: "Not allowed"
-                });
-            }
-
-            return axios.get('https://api.ipify.org?format=json')
-                .then(response => {
-                    console.log(response.data);
-                    return res.status(200).json({
-                        message: response.data.ip
-                    })
+    cors(request, response, () => {
+        if (request.method !== "GET") {
+            return request.status(401).json({
+                message: "Not allowed"
+            });
+        }
+        return axios.get("https://kenkoooo.com/atcoder/resources/ac.json", {headers:{'accept-encoding':'gzip'}})
+            .then(response => {
+                console.log(response.data);
+                return response.status(200).json({
+                    message: response.data.ip
                 })
-                .catch(err => {
-                    return res.status(500).json({
-                        error: err
-                    })
+            })
+            .catch(err => {
+                return response.status(500).json({
+                    error: err
                 })
+            })
 
-        })
+    });
     // firestore.collection('users').doc('kaoru1012').get()
     //     .then(getAcceseTokenQuerySnapShot => {
     //         accessToken = getAcceseTokenQuerySnapShot.data().accessToken;
