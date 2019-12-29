@@ -22,51 +22,56 @@ let senderAc;
 let uploadPath;
 
 //main
-exports.devotterCronJob = functions.https.onRequest(async (request, response) => {
-    firestore.collection('users').doc('kaoru1012').get()
-        .then(querySnapShot => {
-            accessToken = querySnapShot.data().accessToken;
-            accessTokenSecret = querySnapShot.data().accessTokenSecret;
-            return firestore.collection('api').doc('keys').get();
-        })
-        .then(querySnapShot => {
-            const consumerKey = querySnapShot.data().consumerKey;
-            const consumerKeySecret = querySnapShot.data().consumerKeySecret;
-            const client = new twitter({
-                consumer_key: consumerKey,
-                consumer_secret: consumerKeySecret,
-                access_token_key: accessToken,
-                access_token_secret: accessTokenSecret
-            });
-            client.get('statuses/user_timeline', (error, data, res) => {
-                if (!error) {
-                    response.status(200).send(data);
-                }
-                else {
-                    response.status(200).send(error);
-                }
-            });
-            return 0;
-        })
-        .catch(() => {
-            response.status(200).send('Access Promise for each collection failed.');
-            return 0;
-        });
+exports.devotterCronJob = functions.https.onRequest((request, response) => {
+    // firestore.collection('users').doc('kaoru1012').get()
+    //     .then(getAcceseTokenQuerySnapShot => {
+    //         accessToken = getAcceseTokenQuerySnapShot.data().accessToken;
+    //         accessTokenSecret = getAcceseTokenQuerySnapShot.data().accessTokenSecret;
+    //         return firestore.collection('api').doc('keys').get();
+    //     })
+    //     .then(getConsumerKeyQuerySnapShot => {
+    //         const consumerKey = getConsumerKeyQuerySnapShot.data().consumerKey;
+    //         const consumerKeySecret = getConsumerKeyQuerySnapShot.data().consumerKeySecret;
+    //         const client = new twitter({
+    //             consumer_key: consumerKey,
+    //             consumer_secret: consumerKeySecret,
+    //             access_token_key: accessToken,
+    //             access_token_secret: accessTokenSecret
+    //         });
+    //         client.post('statuses/update', { status: "devotter test tweet!" }, (error, data, res) => {
+    //             if (!error) {
+    //                 response.status(200).send(data);
+    //             }
+    //             else {
+    //                 response.status(200).send("Twitter API post promise rejected.");
+    //             }
+    //         });
+    //         return 0;
+    //     })
+    //     .catch(() => {
+    //         response.status(200).send('Access Promise for each collection failed.');
+    //         return 0;
+    //     });
 
     // bucket.file('ac.json').download()
-    //     .then((result) => {
-    //         receiveAc = JSON.parse(result);
+    //     .then((receiveJson) => {
+    //         receiveAc = JSON.parse(receiveJson);
     //         for (const element in receiveAc) {
     //             if (receiveAc[element].user_id === 'kaoru1012') {
-    //                 response.send(receiveAc[element].user_id);
     //                 console.log(receiveAc[element].user_id);
     //                 console.log(receiveAc[element].problem_count);
     //                 break;
     //             }
     //         }
+    //         return axios.get("https://kenkoooo.com/atcoder/resources/ac.json", { Headers: { 'accept-encoding': 'gzip' } });
     //         // senderAc = JSON.stringify(receiveAc);
     //         // uploadPath = 'generate.json';
     //         // bucket.file(uploadPath).save(senderAc);
+    //     })
+    //     .then((result) => {
+    //         let data = JSON.parse(result);
+    //         console.log(data);
+    //         response.status(200).send(data);
     //         return 0;
     //     })
     //     .catch(() => {
