@@ -27,15 +27,11 @@ exports.devotterCronJob = functions.https.onRequest(async (request, response) =>
         .then(querySnapShot => {
             accessToken = querySnapShot.data().accessToken;
             accessTokenSecret = querySnapShot.data().accessTokenSecret;
-            console.log(accessToken);
-            console.log(accessTokenSecret);
             // eslint-disable-next-line promise/no-nesting
             firestore.collection('api').doc('keys').get()
                 .then(querySnapShot => {
                     const consumerKey = querySnapShot.data().consumerKey;
                     const consumerKeySecret = querySnapShot.data().consumerKeySecret;
-                    console.log(consumerKey);
-                    console.log(consumerKeySecret);
                     const client = new twitter({
                         consumer_key: consumerKey,
                         consumer_secret: consumerKeySecret,
