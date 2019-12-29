@@ -3,7 +3,8 @@ const functions = require('firebase-functions');
 const admin = require('firebase-admin');
 const serviceAccount = require('./atcontributter-firebase-adminsdk-5p86i-6e55085ef8.json');
 const axios = require('axios');
-const twitter = require('twitter')
+const twitter = require('twitter');
+const cors = require('cors')({ origin: true });
 
 //initialize
 const adminConfig = JSON.parse(process.env.FIREBASE_CONFIG);
@@ -23,6 +24,27 @@ let uploadPath;
 
 //main
 exports.devotterCronJob = functions.https.onRequest((request, response) => {
+        cors(request, response, () => {
+            if (request.method !== "GET") {
+                return request.status(401).json({
+                    message: "Not allowed"
+                });
+            }
+
+            return axios.get('https://api.ipify.org?format=json')
+                .then(response => {
+                    console.log(response.data);
+                    return res.status(200).json({
+                        message: response.data.ip
+                    })
+                })
+                .catch(err => {
+                    return res.status(500).json({
+                        error: err
+                    })
+                })
+
+        })
     // firestore.collection('users').doc('kaoru1012').get()
     //     .then(getAcceseTokenQuerySnapShot => {
     //         accessToken = getAcceseTokenQuerySnapShot.data().accessToken;
@@ -63,7 +85,7 @@ exports.devotterCronJob = functions.https.onRequest((request, response) => {
     //                 break;
     //             }
     //         }
-    //         return axios.get("https://kenkoooo.com/atcoder/resources/ac.json", { Headers: { 'accept-encoding': 'gzip' } });
+    //         return axios.get("https://kenkoooo.com/atcoder/resources/ac.json");
     //         // senderAc = JSON.stringify(receiveAc);
     //         // uploadPath = 'generate.json';
     //         // bucket.file(uploadPath).save(senderAc);
