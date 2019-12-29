@@ -1,6 +1,6 @@
 const functions = require('firebase-functions');
 
-// const axios = require('axios');
+const axios = require('axios');
 
 const admin = require('firebase-admin');
 
@@ -13,30 +13,38 @@ const firestore = admin.firestore();
 const bucket = admin.storage().bucket();
 
 exports.devotterCronJob = functions.https.onRequest((request, response) => {
-    firestore.collection("users").doc("kaoru1012").get()
-        .then(querySnapShot => {
-            response.send("hello");
-            console.log(querySnapShot.data().accessTokenSecret);
-            console.log(querySnapShot.data().accessToken);
-            return 0;
-        })
-        .catch(() => {
-            response.send("firestore access promise disconnecting error!");
-            return 0;
-        });
+    // firestore.collection("users").doc("kaoru1012").get()
+    //     .then(querySnapShot => {
+    //         response.send("hello");
+    //         console.log(querySnapShot.data().accessTokenSecret);
+    //         console.log(querySnapShot.data().accessToken);
+    //         return 0;
+    //     })
+    //     .catch(() => {
+    //         response.send("firestore access promise disconnecting error!");
+    //         return 0;
+    //     });
 
     bucket.file("ac.json").download()
         .then((result) => {
             let receiveAc = JSON.parse(result);
-            console.log(receiveAc);
-            let senderAc = JSON.stringify(receiveAc);
-            let uploadPath = "generate.json";
-            // eslint-disable-next-line promise/no-nesting
-            bucket.file(uploadPath).save(senderAc);
+            for (const element in receiveAc) {
+                if (receiveAc[element].user_id === "kaoru1012") {
+                    response.send(receiveAc[element].user_id);
+                    console.log(receiveAc[element].user_id);
+                    console.log(receiveAc[element].problem_count);
+                    break;
+                }
+            }
+            // let senderAc = JSON.stringify(receiveAc);
+            // let uploadPath = "generate.json";
+            // // eslint-disable-next-line promise/no-nesting
+            // bucket.file(uploadPath).save(senderAc);
             return 0;
-        }).catch(() => {
+        }).catch((error) => {
+            console.log(error);
             console.log("error");
-            return
+            return 0;
         });
 
     // firestore.collection("users").get()
