@@ -15,8 +15,6 @@ const firestore = admin.firestore();
 const bucket = admin.storage().bucket();
 
 //global
-let consumerKey;
-let consumerKeySecret;
 let accessToken;
 let accessTokenSecret;
 let receiveAc;
@@ -34,8 +32,8 @@ exports.devotterCronJob = functions.https.onRequest(async (request, response) =>
             // eslint-disable-next-line promise/no-nesting
             firestore.collection('api').doc('keys').get()
                 .then(querySnapShot => {
-                    consumerKey = querySnapShot.data().consumerKey;
-                    consumerKeySecret = querySnapShot.data().consumerKeySecret;
+                    const consumerKey = querySnapShot.data().consumerKey;
+                    const consumerKeySecret = querySnapShot.data().consumerKeySecret;
                     console.log(consumerKey);
                     console.log(consumerKeySecret);
                     const client = new twitter({
