@@ -95,7 +95,7 @@ exports.devotterCronJob = functions.region('asia-northeast1').https.onRequest((r
                     });
             });
             senderAc = JSON.stringify(receiveNewAc);
-            uploadPath = 'generate.json';
+            uploadPath = 'ac.json';
             bucket.file(uploadPath).save(senderAc);
             return 0;
         })
