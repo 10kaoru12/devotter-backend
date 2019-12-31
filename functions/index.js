@@ -27,7 +27,6 @@ let receiveNewAcString;
 let receiveNewAc;
 let senderAc;
 let uploadPath;
-let userId;
 let problemCount;
 let newProblemCount;
 
@@ -42,9 +41,6 @@ exports.devotterCronJob = functions.region('asia-northeast1').https.onRequest((r
         .then((receiveJson) => {
             receiveAc = JSON.parse(receiveJson);
             return axios.get("https://kenkoooo.com/atcoder/resources/ac.json", { headers: { 'accept-encoding': 'gzip' } });
-            // senderAc = JSON.stringify(receiveAc);
-            // uploadPath = 'generate.json';
-            // bucket.file(uploadPath).save(senderAc);
         })
         .then((receiveNewJson) => {
             receiveNewAcString = JSON.stringify(receiveNewJson, decycle());
@@ -81,10 +77,10 @@ exports.devotterCronJob = functions.region('asia-northeast1').https.onRequest((r
                             access_token_key: accessToken,
                             access_token_secret: accessTokenSecret
                         });
-                        let tweetMessage = "今日の" + document.id + "さんのAC数は" + (newProblemCount - problemCount) + "でした。#devotter"
+                        let tweetMessage = "今日の" + document.id + "さんのAC数は" + (newProblemCount - problemCount) + "でした。\n#devotter"
                         client.post('statuses/update', {
-                            status:tweetMessage
-                        }, (error, data, res) => {
+                            status: tweetMessage
+                        }, (error) => {
                             if (!error) {
                                 response.status(200).send("success!");
                             }
@@ -96,9 +92,12 @@ exports.devotterCronJob = functions.region('asia-northeast1').https.onRequest((r
                     })
                     .catch(error => {
                         response.status(200).send(error);
-                    })
-            })
-            return firestore.collection('users').doc('kaoru1012').get();
+                    });
+            });
+            senderAc = JSON.stringify(receiveNewAc);
+            uploadPath = 'generate.json';
+            bucket.file(uploadPath).save(senderAc);
+            return 0;
         })
         .catch(error => {
             response.status(200).send(error);
