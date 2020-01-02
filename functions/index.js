@@ -31,76 +31,84 @@ let problemCount;
 let newProblemCount;
 
 //main
-exports.devotterCronJob = functions.region('asia-northeast1').https.onRequest((request, response) => {
+exports.devotterCronJob = functions.region('asia-northeast1').https.onRequest(async (request, response) => {
     cors(request, response, () => {
         response.set('Access-Control-Allow-Origin', 'http://localhost:5000');
         response.set('Access-Control-Allow-Methods', 'GET, HEAD, OPTIONS, POST');
         response.set('Access-Control-Allow-Headers', 'Content-Type');
     });
-    bucket.file('ac.json').download()
-        .then((receiveJson) => {
-            receiveAc = JSON.parse(receiveJson);
-            return axios.get("https://kenkoooo.com/atcoder/resources/ac.json", { headers: { 'accept-encoding': 'gzip' } });
-        })
-        .then((receiveNewJson) => {
-            receiveNewAcString = JSON.stringify(receiveNewJson, decycle());
-            receiveNewAc = JSON.parse(receiveNewAcString, retrocycle()).data;
-            return firestore.collection('api').doc('keys').get();
-        })
-        .then(getConsumerKeyQuerySnapShot => {
-            consumerKey = getConsumerKeyQuerySnapShot.data().consumerKey;
-            consumerKeySecret = getConsumerKeyQuerySnapShot.data().consumerKeySecret;
-            return firestore.collection('users').get();
-        })
-        .then(getUserDataQuerySnapShot => {
-            getUserDataQuerySnapShot.forEach(document => {
-                // eslint-disable-next-line promise/no-nesting
-                firestore.collection('users').doc(document.id).get()
-                    .then(getAcceseTokenQuerySnapShot => {
-                        accessToken = getAcceseTokenQuerySnapShot.data().accessToken;
-                        accessTokenSecret = getAcceseTokenQuerySnapShot.data().accessTokenSecret;
-                        for (const element in receiveAc) {
-                            if (receiveAc[element].user_id === document.id) {
-                                problemCount = receiveAc[element].problem_count;
-                                break;
-                            }
-                        }
-                        for (const element in receiveNewAc) {
-                            if (receiveNewAc[element].user_id === document.id) {
-                                newProblemCount = receiveNewAc[element].problem_count;
-                                break;
-                            }
-                        }
-                        const client = new twitter({
-                            consumer_key: consumerKey,
-                            consumer_secret: consumerKeySecret,
-                            access_token_key: accessToken,
-                            access_token_secret: accessTokenSecret
-                        });
-                        let tweetMessage = "今日の" + document.id + "さんのAC数は" + (newProblemCount - problemCount) + "でした。\n#devotter"
-                        client.post('statuses/update', {
-                            status: tweetMessage
-                        }, (error) => {
-                            if (!error) {
-                                response.status(200).send("success!");
-                            }
-                            else {
-                                response.status(200).send(error);
-                            }
-                        });
-                        return 0;
-                    })
-                    .catch(error => {
-                        response.status(200).send(error);
-                    });
-            });
-            senderAc = JSON.stringify(receiveNewAc);
-            uploadPath = 'ac.json';
-            bucket.file(uploadPath).save(senderAc);
-            return 0;
-        })
-        .catch(error => {
-            response.status(200).send(error);
-            return 0;
+    try {
+        //firebase storageから昨日のAtCoderAC情報が入ったjsonを取得する
+        const receiveJson = await bucket.file('ac.json').download();
+        receiveAc = JSON.parse(receiveJson);
+
+        //kenkooooさんのAtCoderAPIを使って本日のAtCoderAC情報をaxiosで取得
+        const receiveNewJson = await axios.get('https://kenkoooo.com/atcoder/resources/ac.json', { headers: { 'accept-encoding': 'gzip' } });
+        receiveNewAcString = JSON.stringify(receiveNewJson, decycle());
+        receiveNewAc = JSON.parse(receiveNewAcString, retrocycle()).data;
+
+        //firestoreからtwitter apiのconsumerKeyとconsumerKeySecretを取得
+        const getConsumerKeyQuerySnapShot = await firestore.collection('api').doc('keys').get();
+        consumerKey = getConsumerKeyQuerySnapShot.data().consumerKey;
+        consumerKeySecret = getConsumerKeyQuerySnapShot.data().consumerKeySecret;
+
+        //firestoreからツイートに必要なユーザー情報を取得
+        const getUserDataQuerySnapShot = await firestore.collection('users').get();
+        getUserDataQuerySnapShot.forEach(async document => {
+            try {
+                //取得したUserQuerySnapShotからaccessTokenとaccessTokenSecretを取得
+                const getAcceseTokenQuerySnapShot = await firestore.collection('users').doc(document.id).get();
+                accessToken = getAcceseTokenQuerySnapShot.data().accessToken;
+                accessTokenSecret = getAcceseTokenQuerySnapShot.data().accessTokenSecret;
+
+                //昨日のjsonデータ中のfirestoreに登録しているユーザーのAC数を抽出
+                for (const element in receiveAc) {
+                    if (receiveAc[element].user_id === document.id) {
+                        problemCount = receiveAc[element].problem_count;
+                        break;
+                    }
+                }
+
+                //今日のjsonデータ中のfirestoreに登録しているユーザーのAC数を抽出
+                for (const element in receiveNewAc) {
+                    if (receiveNewAc[element].user_id === document.id) {
+                        newProblemCount = receiveNewAc[element].problem_count;
+                        break;
+                    }
+                }
+
+                //twitterクライアントにkeyを登録
+                const client = new twitter({
+                    consumer_key: consumerKey,
+                    consumer_secret: consumerKeySecret,
+                    access_token_key: accessToken,
+                    access_token_secret: accessTokenSecret
+                });
+
+                //twitter apiを使ってツイート
+                let tweetMessage = '今日の' + document.id + 'さんのAC数は' + (newProblemCount - problemCount) + 'でした。\n#devotter'
+                client.post('statuses/update', {
+                    status: tweetMessage
+                }, (error) => {
+                    if (!error) {
+                        response.status(200).send('success!');
+                    }
+                    else {
+                        response.status(500).send(error);
+                    }
+                });
+
+                //今日取得したAC数をfirebase storageにアップロード
+                senderAc = JSON.stringify(receiveNewAc);
+                uploadPath = 'ac.json';
+                bucket.file(uploadPath).save(senderAc);
+            }
+            catch (error) {
+                response.status(500).send(error);
+            }
         });
+    }
+    catch (error) {
+        response.status(500).send(error);
+    }
 });
