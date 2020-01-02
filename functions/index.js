@@ -18,11 +18,15 @@ const firestore = admin.firestore();
 const bucket = admin.storage().bucket();
 
 //global
+let consumerKey;
+let consumerKeySecret;
 let accessToken;
 let accessTokenSecret;
+let receiveAc;
+let receiveNewAcString;
+let receiveNewAc;
 let senderAc;
 let uploadPath;
-let userId;
 let problemCount;
 let newProblemCount;
 
@@ -35,57 +39,67 @@ exports.devotterCronJob = functions.region('asia-northeast1').https.onRequest((r
     });
     bucket.file('ac.json').download()
         .then((receiveJson) => {
-            let receiveAc = JSON.parse(receiveJson);
-            for (const element in receiveAc) {
-                if (receiveAc[element].user_id === 'chokudai') {
-                    problemCount = receiveAc[element].problem_count;
-                    break;
-                }
-            }
+            receiveAc = JSON.parse(receiveJson);
             return axios.get("https://kenkoooo.com/atcoder/resources/ac.json", { headers: { 'accept-encoding': 'gzip' } });
-            // senderAc = JSON.stringify(receiveAc);
-            // uploadPath = 'generate.json';
-            // bucket.file(uploadPath).save(senderAc);
         })
         .then((receiveNewJson) => {
-            let receiveNewAcString = JSON.stringify(receiveNewJson, decycle());
-            let receiveNewAc = JSON.parse(receiveNewAcString, retrocycle()).data;
-            for (const element in receiveNewAc) {
-                if (receiveNewAc[element].user_id === 'chokudai') {
-                    newProblemCount = receiveNewAc[element].problem_count;
-                    break;
-                }
-            }
-            return firestore.collection('users').doc('kaoru1012').get();
-        })
-        .then(getAcceseTokenQuerySnapShot => {
-            accessToken = getAcceseTokenQuerySnapShot.data().accessToken;
-            accessTokenSecret = getAcceseTokenQuerySnapShot.data().accessTokenSecret;
+            receiveNewAcString = JSON.stringify(receiveNewJson, decycle());
+            receiveNewAc = JSON.parse(receiveNewAcString, retrocycle()).data;
             return firestore.collection('api').doc('keys').get();
         })
         .then(getConsumerKeyQuerySnapShot => {
-            const consumerKey = getConsumerKeyQuerySnapShot.data().consumerKey;
-            const consumerKeySecret = getConsumerKeyQuerySnapShot.data().consumerKeySecret;
-            const client = new twitter({
-                consumer_key: consumerKey,
-                consumer_secret: consumerKeySecret,
-                access_token_key: accessToken,
-                access_token_secret: accessTokenSecret
+            consumerKey = getConsumerKeyQuerySnapShot.data().consumerKey;
+            consumerKeySecret = getConsumerKeyQuerySnapShot.data().consumerKeySecret;
+            return firestore.collection('users').get();
+        })
+        .then(getUserDataQuerySnapShot => {
+            getUserDataQuerySnapShot.forEach(document => {
+                // eslint-disable-next-line promise/no-nesting
+                firestore.collection('users').doc(document.id).get()
+                    .then(getAcceseTokenQuerySnapShot => {
+                        accessToken = getAcceseTokenQuerySnapShot.data().accessToken;
+                        accessTokenSecret = getAcceseTokenQuerySnapShot.data().accessTokenSecret;
+                        for (const element in receiveAc) {
+                            if (receiveAc[element].user_id === document.id) {
+                                problemCount = receiveAc[element].problem_count;
+                                break;
+                            }
+                        }
+                        for (const element in receiveNewAc) {
+                            if (receiveNewAc[element].user_id === document.id) {
+                                newProblemCount = receiveNewAc[element].problem_count;
+                                break;
+                            }
+                        }
+                        const client = new twitter({
+                            consumer_key: consumerKey,
+                            consumer_secret: consumerKeySecret,
+                            access_token_key: accessToken,
+                            access_token_secret: accessTokenSecret
+                        });
+                        let tweetMessage = "今日の" + document.id + "さんのAC数は" + (newProblemCount - problemCount) + "でした。\n#devotter"
+                        client.post('statuses/update', {
+                            status: tweetMessage
+                        }, (error) => {
+                            if (!error) {
+                                response.status(200).send("success!");
+                            }
+                            else {
+                                response.status(200).send(error);
+                            }
+                        });
+                        return 0;
+                    })
+                    .catch(error => {
+                        response.status(200).send(error);
+                    });
             });
-            client.post('statuses/update', {
-                status: "今日の***さんのAC数は" + (newProblemCount - problemCount) + "でした。" }, (error, data, res) => {
-                if (!error) {
-                    console.log(res);
-                    response.status(200).send("success!");
-                }
-                else {
-                    console.log(res);
-                    response.status(200).send(error);
-                }
-            });
+            senderAc = JSON.stringify(receiveNewAc);
+            uploadPath = 'ac.json';
+            bucket.file(uploadPath).save(senderAc);
             return 0;
         })
-        .catch((error) => {
+        .catch(error => {
             response.status(200).send(error);
             return 0;
         });
